@@ -153,59 +153,87 @@ function loadTriangles() {
 // setup the webGL shaders
 function setupShaders() {
     
-    // define fragment shader in essl using es6 template strings
-    var fShaderCode = `
-        void main(void) {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); // all fragments are white
+    // Fragment shader: set the triangle color
+var fShaderCode = `
+    precision mediump float;
+
+    void main(void) {
+        // Purple color
+        gl_FragColor = vec4(0.7, 0.1, 1.0, 1.0);
+    }
+`;
+
+// Vertex shader: move and reshape the triangles
+var vShaderCode = `
+    attribute vec3 vertexPosition;
+
+    void main(void) {
+        // Move the triangles to the right and slightly down
+        float newX = vertexPosition.x - .1;
+        float newY = vertexPosition.y - .6;
+
+        // Reshape the triangles:
+        // stretch horizontally and vertically
+        newX = 0.80 + (newX - .90) * 1.8;
+        newY = 0.80 + (newY - .40) * 1.80;
+
+        gl_Position = vec4(newX, newY, vertexPosition.z, 0.9);
+    }
+`;
+
+try {
+    // Create and compile fragment shader
+    var fShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fShader, fShaderCode);
+    gl.compileShader(fShader);
+
+    // Create and compile vertex shader
+    var vShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vShader, vShaderCode);
+    gl.compileShader(vShader);
+        
+    // Check for shader errors
+    if (!gl.getShaderParameter(fShader, gl.COMPILE_STATUS)) {
+        throw "error during fragment shader compile: " +
+            gl.getShaderInfoLog(fShader);
+    } 
+    else if (!gl.getShaderParameter(vShader, gl.COMPILE_STATUS)) {
+        throw "error during vertex shader compile: " +
+            gl.getShaderInfoLog(vShader);
+    } 
+    else {
+        // Create shader program
+        var shaderProgram = gl.createProgram();
+
+        gl.attachShader(shaderProgram, fShader);
+        gl.attachShader(shaderProgram, vShader);
+
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            throw "error during shader program linking: " +
+                gl.getProgramInfoLog(shaderProgram);
+        } 
+        else {
+            // Activate the shader program
+            gl.useProgram(shaderProgram);
+
+            // Connect vertex position to shader
+            vertexPositionAttrib =
+                gl.getAttribLocation(
+                    shaderProgram,
+                    "vertexPosition"
+                );
+
+            gl.enableVertexAttribArray(vertexPositionAttrib);
         }
-    `;
-    
-    // define vertex shader in essl using es6 template strings
-    var vShaderCode = `
-        attribute vec3 vertexPosition;
+    }
+} 
 
-        void main(void) {
-            gl_Position = vec4(vertexPosition, 1.0); // use the untransformed position
-        }
-    `;
-    
-    try {
-        // console.log("fragment shader: "+fShaderCode);
-        var fShader = gl.createShader(gl.FRAGMENT_SHADER); // create frag shader
-        gl.shaderSource(fShader,fShaderCode); // attach code to shader
-        gl.compileShader(fShader); // compile the code for gpu execution
+catch(e) {
+    console.log(e);
+}
 
-        // console.log("vertex shader: "+vShaderCode);
-        var vShader = gl.createShader(gl.VERTEX_SHADER); // create vertex shader
-        gl.shaderSource(vShader,vShaderCode); // attach code to shader
-        gl.compileShader(vShader); // compile the code for gpu execution
-            
-        if (!gl.getShaderParameter(fShader, gl.COMPILE_STATUS)) { // bad frag shader compile
-            throw "error during fragment shader compile: " + gl.getShaderInfoLog(fShader);  
-            gl.deleteShader(fShader);
-        } else if (!gl.getShaderParameter(vShader, gl.COMPILE_STATUS)) { // bad vertex shader compile
-            throw "error during vertex shader compile: " + gl.getShaderInfoLog(vShader);  
-            gl.deleteShader(vShader);
-        } else { // no compile errors
-            var shaderProgram = gl.createProgram(); // create the single shader program
-            gl.attachShader(shaderProgram, fShader); // put frag shader in program
-            gl.attachShader(shaderProgram, vShader); // put vertex shader in program
-            gl.linkProgram(shaderProgram); // link program into gl context
-
-            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) { // bad program link
-                throw "error during shader program linking: " + gl.getProgramInfoLog(shaderProgram);
-            } else { // no shader program link errors
-                gl.useProgram(shaderProgram); // activate shader program (frag and vert)
-                vertexPositionAttrib = // get pointer to vertex shader input
-                    gl.getAttribLocation(shaderProgram, "vertexPosition"); 
-                gl.enableVertexAttribArray(vertexPositionAttrib); // input to shader from array
-            } // end if no shader program link errors
-        } // end if no compile errors
-    } // end try 
-    
-    catch(e) {
-        console.log(e);
-    } // end catch
 } // end setup shaders
 
 // render the loaded model
